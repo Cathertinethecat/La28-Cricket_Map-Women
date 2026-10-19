@@ -1,1 +1,230 @@
-<!doctype html><html><head><meta charset="utf-8"><title>LA28 Cricket Map</title><style>body{font-family:"Times New Roman",Times,serif;margin:40px;color:#1f2a3a}</style></head><body><h1>LA28 Cricket Map (women's)</h1><p>Map under construction. Check back shortly.</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LA28 Cricket Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/dist/Leaflet.GoogleMutant.js"></script>
+<script>const GKEY="AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY";window.gmReady=function(){window._gmLoaded=true;if(window.onGoogleReady)window.onGoogleReady();};</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY&loading=async&callback=gmReady&v=weekly"></script>
+<script src="data.js?v=1792452634"></script>
+<style>
+  html,body{height:100%;margin:0;font-family:"Times New Roman",Times,serif;color:#1d1c19;background:#111}
+  #map{position:absolute;inset:0}
+  .panel{position:absolute;left:10px;bottom:28px;z-index:600;background:rgba(255,255,255,.94);border-radius:4px;padding:8px 12px;max-width:min(330px,calc(100vw - 20px));box-shadow:0 1px 6px rgba(0,0,0,.4)}
+  .panel h1{font-size:1.05rem;margin:0;line-height:1.2;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .panel h1 small{font-size:.8rem;color:#5f5b50;font-weight:400}
+  .panel .body{display:none;margin-top:6px;max-height:62vh;overflow:auto}
+  .panel.open .body{display:block}
+  .leaflet-popup-pane{z-index:1200}
+  .leaflet-popup{margin-bottom:28px}
+  .panel p{margin:0;font-size:.85rem;color:#5f5b50}
+  .panel .btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .panel button,.panel label{font:inherit;font-size:.85rem;border:1px solid #c9c3b2;background:#fff;border-radius:3px;padding:4px 8px;cursor:pointer}
+  .panel .lay label{display:block;width:100%;border:none;padding:2px 0;background:none}
+  .leaflet-popup-content{font-family:"Times New Roman",Times,serif;font-size:15px;line-height:1.4;margin:12px 14px}
+  .leaflet-popup-content h2{font-size:1.1rem;margin:0 0 2px}
+  .leaflet-popup-content h2 a{color:#1f4e79}
+  .leaflet-popup-content .addr{color:#5f5b50;font-size:.9rem;margin:0 0 8px}
+  .kv{display:flex;gap:8px;margin:0 0 8px}
+  .kv div{background:#efece2;border-radius:3px;padding:5px 8px;flex:1}
+  .kv b{display:block;font-size:1.3rem;line-height:1.1}
+  .kv span{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#5f5b50}
+  .seas{border-top:1px solid #c9c3b2;padding-top:6px;margin:0;font-size:.9rem}
+  .seas i{display:block;margin-bottom:2px}
+  .note{font-size:.78rem;color:#5f5b50;margin:6px 0 0}
+  .badge{display:inline-block;font-size:.75rem;color:#fff;border-radius:3px;padding:2px 7px;margin:0 0 8px}
+  .trav{background:#eef3f8;border:1px solid #c9d6e3;border-radius:4px;padding:6px 8px;margin:6px 0;font-size:.88rem}
+  .trav table{border-collapse:collapse;width:100%;margin:4px 0}.trav td,.trav th{padding:2px 4px;text-align:left;font-size:.85rem;border-bottom:1px solid #d8e2ec}.trav th{color:#5f5b50;font-weight:400;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+  .bib{font-size:.78rem;color:#5f5b50;margin:4px 0 0;padding-left:18px}.bib li{margin:0 0 3px}
+  .mk{color:#fff;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 12px "Times New Roman",Times,serif;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  .mk.host{border-style:dashed}
+  .ev{width:18px;height:18px;background:#fff;border:3px solid #6a3fb5;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  .gr{background:#fff;border:3px solid #2f7d4e;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  .gr.la28{border-color:#b3412f;background:#b3412f}
+  .gr.plan{border-style:dashed}
+  .gr.gone{border-color:#9e9e9e;background:#eee}
+  .ont{width:22px;height:22px;border-radius:50%;background:#1f4e79;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+  .lm{background:rgba(31,78,121,.9);color:#fff;border-radius:3px;padding:2px 6px;font:italic 11px "Times New Roman",Times,serif;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+  .term{border-bottom:1px dotted #1f4e79;cursor:help}.termnote{display:block;font-size:.78rem;color:#5f5b50;background:#f6f3ea;border:1px solid #d8d3c5;border-radius:3px;padding:4px 6px;margin:3px 0}
+  .rpanel{position:absolute;top:10px;right:10px;bottom:10px;width:min(340px,calc(100% - 20px));background:rgba(250,248,242,.97);border:1px solid #c9c3b3;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:1200;display:none;flex-direction:column;font-family:"Times New Roman",Times,serif}
+  .rpanel.open{display:flex}.rpanel .rh{padding:8px 10px 6px;border-bottom:1px solid #d8d3c5}.rpanel .rh h2{margin:0 24px 2px 0;font-size:1rem;color:#1f2a3a}.rpanel .rh .sub{color:#5f5b50;font-size:.8rem}
+  .rpanel .rx{position:absolute;top:6px;right:8px;border:none;background:none;font-size:1.2rem;cursor:pointer;color:#5f5b50}
+  .rpanel .rsort{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid #d8d3c5;flex-wrap:wrap}.rpanel .rsort button{font:inherit;font-size:.78rem;padding:2px 8px;border:1px solid #c9c3b3;background:#fff;border-radius:3px;cursor:pointer}.rpanel .rsort button.on{background:#1f4e79;color:#fff;border-color:#1f4e79}
+  .rpanel .rl{overflow:auto;flex:1;padding:4px 0}.rpanel .rl a{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 10px;text-decoration:none;color:#1f2a3a;border-bottom:1px solid #ebe7db;cursor:pointer}.rpanel .rl a:hover{background:#f1ede2}.rpanel .rl .nm{font-weight:700;color:#1f4e79}.rpanel .rl .cu{color:#5f5b50;font-size:.78rem;grid-column:1}.rpanel .rl .rt{text-align:right;font-size:.85rem;color:#1f2a3a}
+  .rpanel .rh .btns{display:flex;gap:6px;flex-wrap:wrap}.rpanel .rh button,.kpanel .kh button{font:inherit;font-size:.82rem;border:1px solid #c9c3b2;background:#fff;border-radius:3px;padding:3px 8px;cursor:pointer}
+  @media (max-width:700px){.rpanel{top:auto;height:60%;left:10px;right:10px;width:auto}}
+  .kpanel{position:absolute;top:10px;right:10px;max-height:calc(100% - 20px);width:min(360px,calc(100% - 20px));background:rgba(250,248,242,.97);border:1px solid #c9c3b3;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:1200;display:none;flex-direction:column;font-family:"Times New Roman",Times,serif}
+  .kpanel.open{display:flex}.kpanel .kh{padding:8px 10px 6px;border-bottom:1px solid #d8d3c5}.kpanel .kh h2{margin:0 24px 2px 0;font-size:1rem;color:#1f2a3a}
+  .kpanel .kx{position:absolute;top:6px;right:8px;border:none;background:none;font-size:1.2rem;cursor:pointer;color:#5f5b50}
+  .kpanel .kb{overflow:auto;flex:1;padding:8px 12px;font-size:.82rem;line-height:1.5;color:#1f2a3a}.kpanel .kb .btns{display:block}
+  .kpanel .kz button{font:inherit;font-size:.85rem;width:30px;padding:2px 0;border:1px solid #c9c3b3;background:#fff;border-radius:3px;cursor:pointer}
+  .kpanel .kh .btns{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  @media (max-width:700px){.kpanel{top:auto;bottom:10px;max-height:70%;left:10px;right:10px;width:auto}}
+  .kpanel .khint{font-size:.9em;color:#5f5b50;font-style:italic;margin:2px 0 8px}
+  .kpanel .ks{border:1px solid #d8d3c5;border-radius:5px;background:#fff;padding:6px 10px 4px;margin-bottom:8px}
+  .kpanel .kst{font-weight:700;font-size:1.05em;color:#1f2a3a;margin-bottom:2px}.kpanel .ksn{font-size:.9em;color:#5f5b50;margin-bottom:4px}
+  .kpanel .kr{display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid #efece3}.kpanel .ksn+.kr,.kpanel .kst+.kr{border-top:none}
+  .kpanel .ksw{flex:0 0 34px;text-align:center;line-height:1}.kpanel .kl{flex:1}
+  .kpanel .kinfo{border-bottom:1px dotted #1f4e79;cursor:help}.kpanel .kdef{display:block;font-size:.92em;color:#5f5b50;background:#f6f3ea;border:1px solid #d8d3c5;border-radius:3px;padding:3px 6px;margin-top:3px}
+  .kpanel .kst{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}.kpanel .kst::before{content:"\25BE";font-size:.8em;color:#5f5b50;width:10px}
+  .kpanel .ks.closed .kst::before{content:"\25B8"}.kpanel .ks.closed .kst{margin-bottom:0}.kpanel .ks.closed .ksn,.kpanel .ks.closed .kr{display:none}
+  .kpanel .kall{font-size:.85em;color:#1f4e79;text-decoration:underline;cursor:pointer;margin-left:8px}
+  .kpanel .kmin{right:30px;font-size:1.1rem}.kpanel.min .kb,.kpanel.min .kh .btns{display:none}.kpanel.min .kh{border-bottom:none;cursor:pointer}.kpanel.min .kmin::before{content:"\25BE"}.kpanel.min .kmin{font-size:.9rem}
+  .astamp{border-top:1px solid #c9c3b2;margin-top:8px;padding-top:4px;font-size:.72rem;color:#5f5b50}.astamp a{color:#1f4e79;cursor:pointer;text-decoration:underline}.astamp .ax{display:none;margin-top:3px}.astamp.open .ax{display:block}
+  @media (max-width:600px), (pointer:coarse) and (max-width:900px){
+    .panel{left:6px;right:6px;bottom:22px;max-width:none;padding:6px 10px}
+    .panel .body{max-height:50vh}
+    .leaflet-popup-content{font-size:14px;margin:10px 12px}
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="rpanel" id="rpanel"><div class="rh"><h2 id="rpTitle"></h2><div class="sub" id="rpSub"></div><button class="rx" id="rpClose" aria-label="close">&times;</button><div class="btns" style="margin-top:6px"><button type="button" id="rpBack">&#8592; Back to legend</button></div></div><div class="rsort"><span style="font-size:.78rem;color:#5f5b50;align-self:center">Sort:</span><button data-rs="rank" class="on">Rank</button><button data-rs="dist">Distance to ONT</button><button data-rs="status">LA28 status</button><button data-rs="az">A to Z</button></div><div class="rl" id="rpList"></div></div>
+<div class="kpanel" id="kpanel"><div class="kh"><h2>Map key</h2><button class="kx kmin" id="kpMin" aria-label="minimize" title="Shrink to title bar">&#8211;</button><button class="kx" id="kpClose" aria-label="close">&times;</button><div class="btns"><button type="button" id="kpBack">&#8592; Back to legend</button><span class="kz" style="margin-left:6px"><span style="font-size:.78rem;color:#5f5b50">Text size</span> <button type="button" id="kpMinus" aria-label="smaller">&minus;</button><button type="button" id="kpPlus" aria-label="larger">+</button></span></div></div><div class="kb" id="kpBody"></div></div>
+<div class="panel" id="panel">
+  <h1 id="ptog"><span id="ptitle">LA28 Cricket</span> <small id="pind">tap for legend &amp; controls</small></h1>
+  <div class="body">
+  <div class="btns" style="margin:0 0 6px"><button type="button" id="keyOpen">Open map key</button><button type="button" id="teamList">Team list</button></div>
+  <ul class="bib" id="intro" style="margin:0 0 6px;color:#1d1c19"></ul>
+  <div class="btns"><b style="font-size:.85rem;width:100%">Zoom to</b>
+    <button id="bWorld">World</button><button id="bAsia">South Asia</button><button id="bEur">Europe and Africa</button><button id="bAm">Americas</button><button id="bOnt">Ontario, CA</button>
+  </div>
+  <div class="btns"><label><input type="checkbox" id="sat"> Satellite</label><label><input type="checkbox" id="tPaths" checked> Flight paths to ONT</label></div>
+  <div class="btns lay" id="layers">
+    <label><input type="checkbox" id="tTeams" checked> <b style="font-size:.85rem">Top eight boards</b> <span style="color:#5f5b50">(number = ICC T20I rank)</span></label>
+    <label><input type="checkbox" id="tHost" checked> <b style="font-size:.85rem">USA (host)</b></label>
+    <label><input type="checkbox" id="tEvents" checked> <b style="font-size:.85rem">Qualifying events</b></label>
+    <label><input type="checkbox" id="tGrounds" checked> <b style="font-size:.85rem">US cricket grounds</b> <span style="color:#5f5b50">(international and MLC)</span></label>
+  </div>
+  <p class="note"><a href="#" id="aboutTog">About the data</a></p>
+  <div id="about" style="display:none"></div>
+  </div>
+</div>
+<script>
+const map=L.map('map',{zoomControl:true,worldCopyJump:true,minZoom:2}).setView([22,20],2);
+/* basemaps: Google (roadmap / hybrid) with CARTO and Esri fallback */
+const streets=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'});
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics'});
+const lab=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19,pane:'overlayPane'});
+const satGroup=L.layerGroup([sat,lab]);streets.addTo(map);
+let gSat=null,gRoad=null,useGoogle=false;
+function currentBase(){return document.getElementById('sat').checked?(useGoogle?gSat:satGroup):(useGoogle?gRoad:streets);}
+function setBase(){[satGroup,streets,gSat,gRoad].forEach(l=>{if(l&&map.hasLayer(l))map.removeLayer(l);});currentBase().addTo(map);}
+document.getElementById('sat').onchange=setBase;
+function revertBase(why){if(!useGoogle)return;useGoogle=false;console.warn('Google basemap unavailable ('+why+'); using Esri/CARTO instead');setBase();}
+window.gm_authFailure=function(){revertBase('auth');};
+window.onGoogleReady=function(){try{if(!L.gridLayer.googleMutant||!window.google||!google.maps)return;
+ gSat=L.gridLayer.googleMutant({type:'hybrid',maxZoom:20});gRoad=L.gridLayer.googleMutant({type:'roadmap',maxZoom:20});
+ let ok=false;const arm=l=>l.on('spawned',e=>{try{google.maps.event.addListenerOnce(e.mapObject,'tilesloaded',()=>{ok=true;});}catch(_){}});arm(gSat);arm(gRoad);
+ useGoogle=true;setBase();setTimeout(()=>{if(!ok)revertBase('no tiles after 8 s');},8000);
+}catch(e){console.warn('Google basemap unavailable',e);revertBase('error');}};
+if(window._gmLoaded)window.onGoogleReady();
+
+/* data */
+const G=META.gender;const ONT={lat:34.056,lng:-117.601,name:'Ontario International Airport (ONT)'};const LAX={lat:33.9416,lng:-118.4085};
+const STATUS={qualified:{c:'#2f7d4e',l:'Qualified for LA28'},course:{c:'#c98a1c',l:'On course to qualify'},qualifier:{c:'#b3412f',l:'Must win through the 2027 Olympic Qualifier'},blocked:{c:'#7a7a7a',l:'Cannot enter as one team'},host:{c:'#1f4e79',l:'Host nation'}};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const km=(a,b)=>turf.distance([a.lng,a.lat],[b.lng,b.lat],{units:'kilometers'});
+const mi=k=>Math.round(k*0.621371);
+const fhrs=k=>{const h=k/870+0.6;return Math.round(h*2)/2;};
+const hm=h=>`${Math.floor(h)} h${h%1?' 30 min':''}`;
+const fmt=n=>n==null?'':Number(n).toLocaleString('en-US');
+const link=(u,t)=>u?`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`:'';
+const termTag=(k,label)=>`<span class="term" data-term="${esc(k)}" title="${esc(GLOSSARY[k]||'')}">${esc(label||k)}</span>`;
+document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.term');if(!el)return;e.preventDefault();e.stopPropagation();const nx=el.nextElementSibling;if(nx&&nx.classList.contains('termnote')){nx.remove();return;}const d=document.createElement('span');d.className='termnote';d.textContent=GLOSSARY[el.dataset.term]||'';el.after(d);});
+const popOpts={maxWidth:340,autoPanPaddingTopLeft:[10,10],autoPanPaddingBottomRight:[10,60]};
+
+/* ONT marker */
+const ontG=L.layerGroup().addTo(map);
+L.marker([ONT.lat,ONT.lng],{icon:L.divIcon({className:'ont',iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:900}).addTo(ontG)
+ .bindTooltip('Ontario, CA (ONT)',{permanent:true,direction:'right',className:'lm',offset:[12,0]})
+ .bindPopup(`<h2>Ontario, California</h2><p class="addr">Ontario International Airport (ONT) and the Ontario Convention Center hotel cluster, about 25 miles from the LA28 cricket venue at Fairplex, Pomona.</p><p class="seas"><i>Why Ontario</i>ONT to the Convention Center hotels is about 10 minutes by road; LAX to Ontario is about 50 miles and an hour or more. The Fairgrounds Cricket Stadium in Pomona is about 15 minutes west of Ontario.</p>`,popOpts);
+L.marker([33.9416,-118.4085],{icon:L.divIcon({className:'ont',iconSize:[14,14],iconAnchor:[7,7],html:'<div style="width:100%;height:100%;border-radius:50%;background:#9e9e9e"></div>'})}).addTo(ontG).bindTooltip('LAX',{direction:'left',className:'lm'});
+
+/* team cards */
+const teamG=L.layerGroup().addTo(map),hostG=L.layerGroup().addTo(map),pathG=L.layerGroup().addTo(map);
+function travelHTML(t){if(!t.airport||t.airport.lat==null)return '';const a=t.airport;const dO=km(a,ONT),dL=km(a,LAX);
+ return `<div class="trav"><b>Getting to the Games</b><table><tr><th>From ${esc(a.iata||a.name)}</th><th>to ONT</th><th>to LAX</th></tr><tr><td>Great-circle distance</td><td>${fmt(mi(dO))} mi</td><td>${fmt(mi(dL))} mi</td></tr><tr><td>Approx. time in the air</td><td>${hm(fhrs(dO))}</td><td>${hm(fhrs(dL))}</td></tr><tr><td>Airport to Ontario hotels</td><td>10 min</td><td>60 to 90 min</td></tr></table>${t.flights&&t.flights.to_lax?`<div style="margin-top:3px"><b>Today, to LAX:</b> ${esc(t.flights.to_lax)}</div>`:''}${t.flights&&t.flights.to_ont?`<div><b>To ONT:</b> ${esc(t.flights.to_ont)}</div>`:''}${t.tz?`<div><b>Time zone:</b> ${esc(t.tz.name||'')}${t.tz.ahead!=null?`, ${t.tz.ahead} hours ahead of Los Angeles`:''}</div>`:''}<div class="note">Distances are great-circle from ${esc(a.name||a.iata)}; air time is an estimate at typical cruise speed plus climb and descent, not a schedule.</div></div>`;}
+function teamCard(t){const st=STATUS[t.status]||STATUS.course;const g=t[G]||{};
+ return `<h2>${link(t.web,t.team)}${t.olympic_name&&t.olympic_name!==t.team?` <small style="font-weight:400;color:#5f5b50">(competes as ${esc(t.olympic_name)})</small>`:''}</h2>
+ <p class="addr">${esc(t.board)}${t.abbr?` (${esc(t.abbr)})`:''}. ${esc(t.hq_city)}, ${esc(t.hq_country)}.</p>
+ <span class="badge" style="background:${st.c}">${esc(st.l)}</span>${t.status_note?`<div class="note" style="margin:-4px 0 8px">${esc(t.status_note)}</div>`:''}
+ <div class="kv">${t.rank!=null?`<div><b>#${t.rank}</b><span>${termTag('T20I','ICC T20I rank')}</span></div>`:''}${t.rating!=null?`<div><b>${t.rating}</b><span>${termTag('rating','rating points')}</span></div>`:''}${t.diaspora&&t.diaspora.n!=null?`<div><b>${fmt(t.diaspora.n)}</b><span>${esc(t.diaspora.label||'SoCal diaspora')}</span></div>`:''}</div>
+ ${g.captain||g.coach?`<p class="seas"><i>${G==='men'?"Men's":"Women's"} team</i>${g.captain?`T20I captain: ${esc(g.captain)}. `:''}${g.coach?`Head coach: ${esc(g.coach)}.`:''}</p>`:''}
+ ${g.recent&&g.recent.length?`<p class="seas"><i>Recent form</i>${g.recent.map(esc).join(' ')}</p>`:''}
+ ${t.home_ground&&t.home_ground.name?`<p class="seas"><i>Home ground</i>${esc(t.home_ground.name)}, ${esc(t.home_ground.city||'')}${t.home_ground.capacity?`, capacity ${fmt(t.home_ground.capacity)}`:''}.</p>`:''}
+ ${travelHTML(t)}
+ ${t.diaspora&&t.diaspora.text?`<p class="seas"><i>Fans already in Southern California</i>${esc(t.diaspora.text)} ${link(t.diaspora.url,'Source')}</p>`:''}
+ <p class="seas"><i>Links</i>${[link(t.web,'Official board site'),link(t.icc_url,'ICC team page'),link(t.la28_url,'LA28 cricket'),link(t.ig,'Instagram')].filter(Boolean).join(' &middot; ')}</p>
+ ${t.sources&&t.sources.length?`<details class="sch"><summary style="cursor:pointer;color:#1f4e79;font-size:.82rem">Sources for this card</summary><ol class="bib">${t.sources.map(s=>`<li>${link(s.url,s.label)}${s.published?`, ${esc(s.published)}`:''}${s.accessed?`, accessed ${esc(s.accessed)}`:''}</li>`).join('')}</ol></details>`:''}`;}
+const teamMarkers={};
+TEAMS.forEach(t=>{const st=STATUS[t.status]||STATUS.course;const isHost=t.status==='host';const sz=isHost?30:Math.max(26,40-(t.rank||8)*1.5);
+ const m=L.marker([t.lat,t.lng],{icon:L.divIcon({className:'mk'+(isHost?' host':''),html:isHost?'US':String(t.rank||''),iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:500}).bindTooltip(t.team,{direction:'top',className:'lm',offset:[0,-sz/2]}).bindPopup(()=>teamCard(t),popOpts);
+ m.getElement&&0;m.on('add',()=>{const el=m.getElement();if(el)el.style.background=st.c;});
+ m.addTo(isHost?hostG:teamG);teamMarkers[t.team]=m;t._m=m;
+ if(t.airport&&t.airport.lat!=null&&!isHost){const gc=turf.greatCircle([t.airport.lng,t.airport.lat],[ONT.lng,ONT.lat],{npoints:80});L.geoJSON(gc,{style:{color:st.c,weight:1.5,opacity:.7,dashArray:'6 5'}}).addTo(pathG);}
+});
+/* qualifying events */
+const evG=L.layerGroup().addTo(map);
+(EVENTS||[]).forEach(e=>{if(e.lat==null)return;if(e.gender&&e.gender!=='both'&&e.gender!==G)return;
+ L.marker([e.lat,e.lng],{icon:L.divIcon({className:'ev',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:300}).addTo(evG).bindTooltip(e.name,{direction:'top',className:'lm',offset:[0,-10]})
+ .bindPopup(`<h2>${esc(e.name)}</h2><p class="addr">${esc([e.venue,e.city,e.country].filter(Boolean).join(', '))}${e.dates?`. ${esc(e.dates)}`:''}.</p>${e.note?`<p class="seas"><i>What it decides</i>${esc(e.note)}</p>`:''}${e.url?`<p class="seas"><i>Source</i>${link(e.url,e.source||'ICC')}</p>`:''}`,popOpts);});
+/* US grounds */
+const grG=L.layerGroup().addTo(map);
+(GROUNDS||[]).forEach(g=>{if(g.lat==null)return;const cap=g.capacity||5000;const sz=Math.max(14,Math.min(30,Math.sqrt(cap/40)));const cls='gr'+(g.status==='LA28 venue'?' la28':'')+(g.status==='planned'?' plan':'')+(g.status==='dismantled'?' gone':'');
+ L.marker([g.lat,g.lng],{icon:L.divIcon({className:cls,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:g.status==='LA28 venue'?800:200}).addTo(grG).bindTooltip(g.name,{direction:'top',className:'lm',offset:[0,-sz/2]})
+ .bindPopup(`<h2>${link(g.web,g.name)}</h2><p class="addr">${esc(g.city)}, ${esc(g.state)}. ${esc(g.status)}${g.opened?`, opened ${esc(g.opened)}`:''}.</p><div class="kv">${g.capacity?`<div><b>${fmt(g.capacity)}</b><span>capacity</span></div>`:''}<div><b>${esc(g.region||'')}</b><span>region</span></div></div>${g.tenants?`<p class="seas"><i>Tenants</i>${esc(g.tenants)}</p>`:''}${g.notable?`<p class="seas"><i>Notable</i>${esc(g.notable)}</p>`:''}${g.owner_or_operator?`<p class="seas"><i>Owner or operator</i>${esc(g.owner_or_operator)}</p>`:''}${g.sources&&g.sources.length?`<p class="seas"><i>Sources</i>${g.sources.map(s=>link(s.url,s.label)).join(' &middot; ')}</p>`:''}`,popOpts);});
+
+/* layer toggles */
+const tog=(id,layer)=>{const cb=document.getElementById(id);cb.onchange=()=>cb.checked?layer.addTo(map):map.removeLayer(layer);};
+tog('tTeams',teamG);tog('tHost',hostG);tog('tEvents',evG);tog('tGrounds',grG);tog('tPaths',pathG);
+/* zoom buttons */
+document.getElementById('bWorld').onclick=()=>map.setView([22,20],2);
+document.getElementById('bAsia').onclick=()=>map.setView([18,80],4);
+document.getElementById('bEur').onclick=()=>map.setView([10,15],3);
+document.getElementById('bAm').onclick=()=>map.setView([25,-85],3);
+document.getElementById('bOnt').onclick=()=>map.setView([34.06,-117.65],11);
+/* legend */
+const panel=document.getElementById('panel');document.getElementById('ptog').onclick=()=>{panel.classList.toggle('open');document.getElementById('pind').textContent=panel.classList.contains('open')?'tap to hide':'tap for legend & controls';};
+if(window.innerWidth>700)document.getElementById('ptog').click();
+document.getElementById('ptitle').textContent=META.title;document.title=META.title;
+document.getElementById('intro').innerHTML=(META.intro||[]).map(x=>`<li>${x}</li>`).join('');
+document.getElementById('aboutTog').onclick=e=>{e.preventDefault();const a=document.getElementById('about');a.style.display=a.style.display==='none'?'block':'none';};
+document.getElementById('about').innerHTML=`<p class="note" style="margin:6px 0 2px"><b>How this map was built.</b></p><ul class="bib">${(META.about||[]).map(x=>`<li>${x}</li>`).join('')}</ul><p class="note" style="margin:6px 0 2px"><b>Sources (${(SOURCES||[]).length}).</b></p><ol class="bib">${(SOURCES||[]).map(s=>`<li>${link(s.url,s.label)}${s.published?`. ${esc(s.published)}`:''}${s.accessed?`. Accessed ${esc(s.accessed)}`:''}.</li>`).join('')}</ol>`;
+/* team list panel */
+const rp=document.getElementById('rpanel');let sortBy='rank';
+function renderRoster(){const rows=TEAMS.slice();const w={qualified:0,host:1,course:2,qualifier:3,blocked:4};
+ rows.sort((a,b)=>sortBy==='rank'?((a.rank||99)-(b.rank||99)):sortBy==='dist'?(((a.airport&&km(a.airport,ONT))||1e9)-((b.airport&&km(b.airport,ONT))||1e9)):sortBy==='status'?((w[a.status]??9)-(w[b.status]??9))||((a.rank||99)-(b.rank||99)):a.team.localeCompare(b.team));
+ document.getElementById('rpList').innerHTML=rows.map(t=>{const st=STATUS[t.status]||STATUS.course;const d=t.airport&&t.airport.lat!=null?`${fmt(mi(km(t.airport,ONT)))} mi to ONT`:'';return `<a data-t="${esc(t.team)}"><span class="nm">${t.rank!=null?'#'+t.rank+' ':''}${esc(t.team)}</span><span class="rt">${d}</span><span class="cu"><span style="color:${st.c}">&#9679;</span> ${esc(st.l)}${t.hq_city?` &middot; ${esc(t.hq_city)}`:''}</span></a>`;}).join('');
+ document.querySelectorAll('#rpList a').forEach(a=>a.onclick=()=>{const t=TEAMS.find(x=>x.team===a.dataset.t);if(!t)return;if(!map.hasLayer(t.status==='host'?hostG:teamG)){document.getElementById(t.status==='host'?'tHost':'tTeams').click();}map.setView([t.lat,t.lng],4);t._m.openPopup();if(window.innerWidth<=700)rp.classList.remove('open');});
+ document.querySelectorAll('[data-rs]').forEach(b=>b.classList.toggle('on',b.dataset.rs===sortBy));}
+document.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{sortBy=b.dataset.rs;renderRoster();});
+document.getElementById('teamList').onclick=()=>{document.getElementById('rpTitle').textContent=META.title;document.getElementById('rpSub').textContent=`${TEAMS.length} teams. Tap one for its card.`;renderRoster();rp.classList.add('open');document.getElementById('kpanel').classList.remove('open');map.closePopup();if(window.innerWidth<=700)panel.classList.remove('open');};
+document.getElementById('rpClose').onclick=()=>rp.classList.remove('open');
+document.getElementById('rpBack').onclick=()=>{rp.classList.remove('open');panel.classList.add('open');document.getElementById('pind').textContent='tap to hide';};
+/* map key */
+(()=>{const kp=document.getElementById('kpanel'),kb=document.getElementById('kpBody');let kz=0.82;const apply=()=>{kb.style.fontSize=kz+'rem';};
+ const dot=c=>`<span style="color:${c};font-size:1.3em">&#9679;</span>`;const row=(sw,label,d)=>`<div class="kr"><span class="ksw">${sw}</span><div class="kl">${d?`<span class="kinfo" data-def="${esc(d)}" title="${esc(d)}">${label}</span>`:label}</div></div>`;const sec=(t,n)=>`<div class="ks"><div class="kst">${t}</div>${n?`<div class="ksn">${n}</div>`:''}`;
+ kb.innerHTML=`<div class="khint">Tap a section title to open or close it. Hover over or tap an underlined item for its definition.<span class="kall" id="kpAll">Collapse all</span></div>`
+ +sec('Teams','Circle color is LA28 status; the number is the ICC T20I rank.')+row(dot(STATUS.qualified.c),'Qualified','Place at LA28 already secured.')+row(dot(STATUS.course.c),'On course','Would qualify on current rankings; nothing is locked until the ICC cutoff.')+row(dot(STATUS.qualifier.c),'Must qualify','Has to win a place at the 2027 Olympic Qualifier tournament.')+row(dot(STATUS.blocked.c),'Cannot enter as one team','West Indies is a combined team of many countries; the Olympics need a single nation.')+row(`<span class="mk host" style="background:${STATUS.host.c};width:18px;height:18px;font-size:9px;display:inline-flex">US</span>`,'Host nation','USA qualifies as host if it meets the ICC ranking condition.')+'</div>'
+ +sec('Other markers')+row('<span class="ont" style="display:inline-block;width:14px;height:14px"></span>','Ontario, CA (ONT)','Ontario International Airport and the Convention Center hotels, 15 minutes from the LA28 cricket venue.')+row('<span class="ev" style="display:inline-block;width:12px;height:12px"></span>','Qualifying event','A tournament that decides LA28 places.')+row('<span class="gr" style="display:inline-block;width:14px;height:14px"></span>','US cricket ground','A ground that hosts international or Major League Cricket matches; bigger square = bigger capacity.')+row('<span class="gr la28" style="display:inline-block;width:14px;height:14px"></span>','LA28 venue','Fairgrounds Cricket Stadium at Fairplex, Pomona.')+row('<span class="gr gone" style="display:inline-block;width:14px;height:14px"></span>','Dismantled','Temporary stadium no longer standing.')+row('<span style="color:#c98a1c;font-weight:700">- - -</span>','Flight path','Great-circle line from the team\'s main airport to ONT.')+'</div>'
+ +sec('Cricket terms')+Object.keys(GLOSSARY||{}).map(k=>row('<span style="color:#1f4e79">&#9679;</span>',esc(k),GLOSSARY[k])).join('')+'</div>'
+ +sec('Basemap')+row('<span style="color:#1f4e79">&#9679;</span>','Google Maps (street or satellite)','Falls back to CARTO and Esri tiles if Google cannot load.')+'</div>';
+ document.getElementById('keyOpen').onclick=()=>{kp.classList.add('open');map.closePopup();rp.classList.remove('open');if(window.innerWidth<=700)panel.classList.remove('open');};
+ document.getElementById('kpClose').onclick=()=>kp.classList.remove('open');
+ document.getElementById('kpBack').onclick=()=>{kp.classList.remove('open');panel.classList.add('open');document.getElementById('pind').textContent='tap to hide';};
+ document.getElementById('kpPlus').onclick=()=>{kz=Math.min(1.6,kz+0.1);apply();};document.getElementById('kpMinus').onclick=()=>{kz=Math.max(0.6,kz-0.1);apply();};apply();
+ const kmin=document.getElementById('kpMin');kmin.onclick=e=>{e.stopPropagation();kp.classList.toggle('min');kmin.textContent=kp.classList.contains('min')?'':'–';kmin.title=kp.classList.contains('min')?'Expand':'Shrink to title bar';};kp.querySelector('.kh').addEventListener('click',e=>{if(kp.classList.contains('min')&&!e.target.closest('.kx')){kp.classList.remove('min');kmin.textContent='–';kmin.title='Shrink to title bar';}});
+ kb.addEventListener('click',e=>{const t=e.target.closest('.kst');if(t){t.parentElement.classList.toggle('closed');return;}const el=e.target.closest('.kinfo');if(!el)return;const nx=el.nextElementSibling;if(nx&&nx.classList.contains('kdef')){nx.remove();return;}const d=document.createElement('span');d.className='kdef';d.textContent=el.dataset.def;el.after(d);});
+ const kall=document.getElementById('kpAll');kall.onclick=()=>{const secs=[...kb.querySelectorAll('.ks')];const open=secs.some(x=>!x.classList.contains('closed'));secs.forEach(x=>x.classList.toggle('closed',open));kall.textContent=open?'Expand all':'Collapse all';};})();
+/* audit stamp */
+function auditStamp(el){if(!el||el.querySelector('.astamp')||!META.audit_date)return;const d=document.createElement('div');d.className='astamp';d.innerHTML=`Data as of ${esc(META.as_of)}; link check ${esc(META.audit_date)}. <a>What is this?</a><div class="ax">Every link and figure on this card was collected from the sources listed and then checked by AI agents (Claude Sonnet, run by Anthropic's Claude) on the date shown: each link was opened to confirm it points at the page named and each figure compared with its cited page. The check is automated and can miss what a person would catch.</div>`;d.querySelector('a').onclick=e=>{e.preventDefault();d.classList.toggle('open');};el.appendChild(d);}
+map.on('popupopen',e=>{const el=e.popup.getElement()&&e.popup.getElement().querySelector('.leaflet-popup-content');auditStamp(el);});
+</script>
+</body>
+</html>
