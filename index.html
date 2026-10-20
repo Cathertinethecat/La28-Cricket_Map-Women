@@ -10,7 +10,7 @@
 <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/dist/Leaflet.GoogleMutant.js"></script>
 <script>const GKEY="AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY";window.gmReady=function(){window._gmLoaded=true;if(window.onGoogleReady)window.onGoogleReady();};</script>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY&loading=async&callback=gmReady&v=weekly"></script>
-<script src="data.js?v=1792457770"></script>
+<script src="data.js?v=1792472996"></script>
 <style>
   html,body{height:100%;margin:0;font-family:"Times New Roman",Times,serif;color:#1d1c19;background:#111}
   #map{position:absolute;inset:0}
@@ -81,6 +81,7 @@
     .panel .body{max-height:50vh}
     .leaflet-popup-content{font-size:14px;margin:10px 12px}
   }
+  .leaflet-popup-content{max-height:calc(100vh - 150px);overflow:auto;overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -239,6 +240,8 @@ document.getElementById('rpBack').onclick=()=>{rp.classList.remove('open');panel
 /* audit stamp */
 function auditStamp(el){if(!el||el.querySelector('.astamp')||!META.audit_date)return;const d=document.createElement('div');d.className='astamp';d.innerHTML=`Data as of ${esc(META.as_of)}; link check ${esc(META.audit_date)}. <a>What is this?</a><div class="ax">Every link and figure on this card was collected from the sources listed and then checked by AI agents (Claude Sonnet, run by Anthropic's Claude) on the date shown: each link was opened to confirm it points at the page named and each figure compared with its cited page. The check is automated and can miss what a person would catch.</div>`;d.querySelector('a').onclick=e=>{e.preventDefault();d.classList.toggle('open');};el.appendChild(d);}
 map.on('popupopen',e=>{const el=e.popup.getElement()&&e.popup.getElement().querySelector('.leaflet-popup-content');auditStamp(el);});
+/* keep cards on screen: re-run the popup's auto-pan whenever live data or photos change its height */
+map.on('popupopen',e=>{const el=e.popup.getElement();if(!el)return;let t;const fix=()=>{clearTimeout(t);t=setTimeout(()=>{try{e.popup.update();}catch(_){}},80);};const ob=new MutationObserver(()=>{fix();el.querySelectorAll('img').forEach(i=>{if(!i._kv){i._kv=1;i.addEventListener('load',fix);}});});ob.observe(el,{childList:true,subtree:true,attributes:true});el.querySelectorAll('img').forEach(i=>{i._kv=1;i.addEventListener('load',fix);});fix();e.popup.once('remove',()=>{ob.disconnect();clearTimeout(t);});});
 </script>
 </body>
 </html>
