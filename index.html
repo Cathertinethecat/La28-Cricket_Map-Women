@@ -10,7 +10,7 @@
 <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/dist/Leaflet.GoogleMutant.js"></script>
 <script>const GKEY="AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY";window.gmReady=function(){window._gmLoaded=true;if(window.onGoogleReady)window.onGoogleReady();};</script>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY&loading=async&callback=gmReady&v=weekly"></script>
-<script src="data.js?v=1792456970"></script>
+<script src="data.js?v=1792457214"></script>
 <style>
   html,body{height:100%;margin:0;font-family:"Times New Roman",Times,serif;color:#1d1c19;background:#111}
   #map{position:absolute;inset:0}
@@ -28,6 +28,7 @@
   .leaflet-popup-content{font-family:"Times New Roman",Times,serif;font-size:15px;line-height:1.4;margin:12px 14px}
   .leaflet-popup-content h2{font-size:1.1rem;margin:0 0 2px}
   .leaflet-popup-content h2 a{color:#1f4e79}
+  .hphoto{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:3px;margin:0 0 8px;background:#efece2}
   .leaflet-popup-content .addr{color:#5f5b50;font-size:.9rem;margin:0 0 8px}
   .kv{display:flex;gap:8px;margin:0 0 8px}
   .kv div{background:#efece2;border-radius:3px;padding:5px 8px;flex:1}
@@ -128,6 +129,8 @@ if(window._gmLoaded)window.onGoogleReady();
 
 /* data */
 const G=META.gender;const ONT={lat:34.056,lng:-117.601,name:'Ontario International Airport (ONT)'};const LAX={lat:33.9416,lng:-118.4085};
+const FLAG={India:'in',Pakistan:'pk',England:'gb-eng',Australia:'au','New Zealand':'nz','South Africa':'za',Bangladesh:'bd','Sri Lanka':'lk',USA:'us'};
+const flagImg=(t,w)=>FLAG[t.team]?`<img src="https://flagcdn.com/w${w||80}/${FLAG[t.team]}.png" srcset="https://flagcdn.com/w${(w||80)*2}/${FLAG[t.team]}.png 2x" alt="" style="height:${Math.round((w||80)*0.55)}px;width:auto;border:1px solid #c9c3b2;vertical-align:middle;border-radius:2px">`:`<span style="display:inline-block;background:#7b1230;color:#fff;font:700 ${Math.round((w||80)*0.3)}px 'Times New Roman',serif;padding:0 8px;line-height:${Math.round((w||80)*0.55)}px;border-radius:2px;vertical-align:middle">WI</span>`;
 const STATUS={qualified:{c:'#2f7d4e',l:'Qualified for LA28'},course:{c:'#c98a1c',l:'On course to qualify'},qualifier:{c:'#b3412f',l:'Must win through the 2027 Olympic Qualifier'},blocked:{c:'#7a7a7a',l:'Cannot enter as one team'},host:{c:'#1f4e79',l:'Host nation'}};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const km=(a,b)=>turf.distance([a.lng,a.lat],[b.lng,b.lat],{units:'kilometers'});
@@ -154,7 +157,7 @@ const teamG=L.layerGroup().addTo(map),hostG=L.layerGroup().addTo(map),pathG=L.la
 function travelHTML(t){if(!t.airport||t.airport.lat==null)return '';const a=t.airport;const dO=km(a,ONT),dL=km(a,LAX);
  return `<div class="trav"><b>Getting to the Games</b><table><tr><th>From ${esc(a.iata||a.name)}</th><th>to ONT</th><th>to LAX</th></tr><tr><td>Great-circle distance</td><td>${fmt(mi(dO))} mi</td><td>${fmt(mi(dL))} mi</td></tr><tr><td>Approx. time in the air</td><td>${hm(fhrs(dO))}</td><td>${hm(fhrs(dL))}</td></tr><tr><td>Airport to Ontario hotels</td><td>10 min</td><td>60 to 90 min</td></tr></table>${t.flights&&t.flights.to_lax?`<div style="margin-top:3px"><b>Today, to LAX:</b> ${esc(t.flights.to_lax)}</div>`:''}${t.flights&&t.flights.to_ont?`<div><b>To ONT:</b> ${esc(t.flights.to_ont)}</div>`:''}${t.tz?`<div><b>Time zone:</b> ${esc(t.tz.name||'')}${t.tz.ahead!=null?`, ${t.tz.ahead} hours ahead of Los Angeles`:''}</div>`:''}<div class="note">Distances are great-circle from ${esc(a.name||a.iata)}; air time is an estimate at typical cruise speed plus climb and descent, not a schedule.</div></div>`;}
 function teamCard(t){const st=STATUS[t.status]||STATUS.course;const g=t[G]||{};
- return `<h2>${link(t.web,t.team)}${t.olympic_name&&t.olympic_name!==t.team?` <small style="font-weight:400;color:#5f5b50">(competes as ${esc(t.olympic_name)})</small>`:''}</h2>
+ return `${t.photo&&t.photo.url?`<img class="hphoto" src="${esc(t.photo.url)}" alt="" loading="lazy" onerror="this.style.display='none'">${t.photo.credit?`<div class="note" style="margin:-6px 0 6px">${esc(t.photo.credit)}</div>`:''}`:''}<h2 style="display:flex;align-items:center;gap:8px">${flagImg(t,60)}<span>${link(t.web,t.team)}${t.olympic_name&&t.olympic_name!==t.team?` <small style="font-weight:400;color:#5f5b50">(competes as ${esc(t.olympic_name)})</small>`:''}</span></h2>
  <p class="addr">${esc(t.board)}${t.abbr?` (${esc(t.abbr)})`:''}. ${esc(t.hq_city)}, ${esc(t.hq_country)}.</p>
  <span class="badge" style="background:${st.c}">${esc(st.l)}</span>${t.status_note?`<div class="note" style="margin:-4px 0 8px">${esc(t.status_note)}</div>`:''}
  <div class="kv">${t.rank!=null?`<div><b>#${t.rank}</b><span>${termTag('T20I','ICC T20I rank')}</span></div>`:''}${t.rating!=null?`<div><b>${t.rating}</b><span>${termTag('rating','rating points')}</span></div>`:''}${t.diaspora&&t.diaspora.n!=null?`<div><b>${fmt(t.diaspora.n)}</b><span>${esc(t.diaspora.label||'SoCal diaspora')}</span></div>`:''}</div>
@@ -211,7 +214,7 @@ document.getElementById('about').innerHTML=`<p class="note" style="margin:6px 0 
 const rp=document.getElementById('rpanel');let sortBy='rank';
 function renderRoster(){const rows=TEAMS.slice();const w={qualified:0,host:1,course:2,qualifier:3,blocked:4};
  rows.sort((a,b)=>sortBy==='rank'?((a.rank||99)-(b.rank||99)):sortBy==='dist'?(((a.airport&&km(a.airport,ONT))||1e9)-((b.airport&&km(b.airport,ONT))||1e9)):sortBy==='status'?((w[a.status]??9)-(w[b.status]??9))||((a.rank||99)-(b.rank||99)):a.team.localeCompare(b.team));
- document.getElementById('rpList').innerHTML=rows.map(t=>{const st=STATUS[t.status]||STATUS.course;const d=t.airport&&t.airport.lat!=null?`${fmt(mi(km(t.airport,ONT)))} mi to ONT`:'';return `<a data-t="${esc(t.team)}"><span class="nm">${t.rank!=null?'#'+t.rank+' ':''}${esc(t.team)}</span><span class="rt">${d}</span><span class="cu"><span style="color:${st.c}">&#9679;</span> ${esc(st.l)}${t.hq_city?` &middot; ${esc(t.hq_city)}`:''}</span></a>`;}).join('');
+ document.getElementById('rpList').innerHTML=rows.map(t=>{const st=STATUS[t.status]||STATUS.course;const d=t.airport&&t.airport.lat!=null?`${fmt(mi(km(t.airport,ONT)))} mi to ONT`:'';return `<a data-t="${esc(t.team)}"><span class="nm">${flagImg(t,40)} ${t.rank!=null?'#'+t.rank+' ':''}${esc(t.team)}</span><span class="rt">${d}</span><span class="cu"><span style="color:${st.c}">&#9679;</span> ${esc(st.l)}${t.hq_city?` &middot; ${esc(t.hq_city)}`:''}</span></a>`;}).join('');
  document.querySelectorAll('#rpList a').forEach(a=>a.onclick=()=>{const t=TEAMS.find(x=>x.team===a.dataset.t);if(!t)return;if(!map.hasLayer(t.status==='host'?hostG:teamG)){document.getElementById(t.status==='host'?'tHost':'tTeams').click();}const c=map.getCenter().lng;const k=Math.round((c-t.lng)/360)*360;map.setView([t.lat,t.lng+k],4);const mk=(t.status==='host'?hostG:teamG).getLayers().find(l=>Math.abs(l.getLatLng().lng-(t.lng+k))<1e-6&&Math.abs(l.getLatLng().lat-t.lat)<1e-6);(mk||t._m).openPopup();if(window.innerWidth<=700)rp.classList.remove('open');});
  document.querySelectorAll('[data-rs]').forEach(b=>b.classList.toggle('on',b.dataset.rs===sortBy));}
 document.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{sortBy=b.dataset.rs;renderRoster();});
