@@ -10,7 +10,7 @@
 <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/dist/Leaflet.GoogleMutant.js"></script>
 <script>const GKEY="AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY";window.gmReady=function(){window._gmLoaded=true;if(window.onGoogleReady)window.onGoogleReady();};</script>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBv-3fjCEu5UzXlyiA2OGjzyUl3tprLpxY&loading=async&callback=gmReady&v=weekly"></script>
-<script src="data.js?v=1792452634"></script>
+<script src="data.js?v=1792456230"></script>
 <style>
   html,body{height:100%;margin:0;font-family:"Times New Roman",Times,serif;color:#1d1c19;background:#111}
   #map{position:absolute;inset:0}
@@ -106,7 +106,8 @@
   </div>
 </div>
 <script>
-const map=L.map('map',{zoomControl:true,worldCopyJump:true,minZoom:2}).setView([22,20],2);
+const map=L.map('map',{zoomControl:true,worldCopyJump:false,minZoom:2}).setView([22,20],2);
+const COPIES=[-360,0,360];/* every marker and path is drawn in three world copies so the map pans across the date line without a jump */
 /* basemaps: Google (roadmap / hybrid) with CARTO and Esri fallback */
 const streets=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'});
 const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics'});
@@ -137,14 +138,16 @@ const fmt=n=>n==null?'':Number(n).toLocaleString('en-US');
 const link=(u,t)=>u?`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`:'';
 const termTag=(k,label)=>`<span class="term" data-term="${esc(k)}" title="${esc(GLOSSARY[k]||'')}">${esc(label||k)}</span>`;
 document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.term');if(!el)return;e.preventDefault();e.stopPropagation();const nx=el.nextElementSibling;if(nx&&nx.classList.contains('termnote')){nx.remove();return;}const d=document.createElement('span');d.className='termnote';d.textContent=GLOSSARY[el.dataset.term]||'';el.after(d);});
+/* great-circle points with longitudes unwrapped so a path crossing the date line stays one continuous line */
+function gcPoints(a,b){const gc=turf.greatCircle([a.lng,a.lat],[b.lng,b.lat],{npoints:100});let cs=gc.geometry.type==='MultiLineString'?[].concat(...gc.geometry.coordinates):gc.geometry.coordinates;const out=[];let prev=null;cs.forEach(c=>{let lng=c[0];if(prev!=null){while(lng-prev>180)lng-=360;while(lng-prev<-180)lng+=360;}prev=lng;out.push([c[1],lng]);});const end=out[out.length-1][1];const shift=Math.round((b.lng-end)/360)*360;return out.map(p=>[p[0],p[1]+shift]);}
 const popOpts={maxWidth:340,autoPanPaddingTopLeft:[10,10],autoPanPaddingBottomRight:[10,60]};
 
 /* ONT marker */
 const ontG=L.layerGroup().addTo(map);
-L.marker([ONT.lat,ONT.lng],{icon:L.divIcon({className:'ont',iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:900}).addTo(ontG)
+COPIES.forEach(o=>L.marker([ONT.lat,ONT.lng+o],{icon:L.divIcon({className:'ont',iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:900}).addTo(ontG)
  .bindTooltip('Ontario, CA (ONT)',{permanent:true,direction:'right',className:'lm',offset:[12,0]})
- .bindPopup(`<h2>Ontario, California</h2><p class="addr">Ontario International Airport (ONT) and the Ontario Convention Center hotel cluster, about 25 miles from the LA28 cricket venue at Fairplex, Pomona.</p><p class="seas"><i>Why Ontario</i>ONT to the Convention Center hotels is about 10 minutes by road; LAX to Ontario is about 50 miles and an hour or more. The Fairgrounds Cricket Stadium in Pomona is about 15 minutes west of Ontario.</p>`,popOpts);
-L.marker([33.9416,-118.4085],{icon:L.divIcon({className:'ont',iconSize:[14,14],iconAnchor:[7,7],html:'<div style="width:100%;height:100%;border-radius:50%;background:#9e9e9e"></div>'})}).addTo(ontG).bindTooltip('LAX',{direction:'left',className:'lm'});
+ .bindPopup(`<h2>Ontario, California</h2><p class="addr">Ontario International Airport (ONT) and the Ontario Convention Center hotel cluster, about 25 miles from the LA28 cricket venue at Fairplex, Pomona.</p><p class="seas"><i>Why Ontario</i>ONT to the Convention Center hotels is about 10 minutes by road; LAX to Ontario is about 50 miles and an hour or more. The Fairgrounds Cricket Stadium in Pomona is about 15 minutes west of Ontario.</p>`,popOpts));
+COPIES.forEach(o=>L.marker([33.9416,-118.4085+o],{icon:L.divIcon({className:'ont',iconSize:[14,14],iconAnchor:[7,7],html:'<div style="width:100%;height:100%;border-radius:50%;background:#9e9e9e"></div>'})}).addTo(ontG).bindTooltip('LAX',{direction:'left',className:'lm'}));
 
 /* team cards */
 const teamG=L.layerGroup().addTo(map),hostG=L.layerGroup().addTo(map),pathG=L.layerGroup().addTo(map);
@@ -164,21 +167,20 @@ function teamCard(t){const st=STATUS[t.status]||STATUS.course;const g=t[G]||{};
  ${t.sources&&t.sources.length?`<details class="sch"><summary style="cursor:pointer;color:#1f4e79;font-size:.82rem">Sources for this card</summary><ol class="bib">${t.sources.map(s=>`<li>${link(s.url,s.label)}${s.published?`, ${esc(s.published)}`:''}${s.accessed?`, accessed ${esc(s.accessed)}`:''}</li>`).join('')}</ol></details>`:''}`;}
 const teamMarkers={};
 TEAMS.forEach(t=>{const st=STATUS[t.status]||STATUS.course;const isHost=t.status==='host';const sz=isHost?30:Math.max(26,40-(t.rank||8)*1.5);
- const m=L.marker([t.lat,t.lng],{icon:L.divIcon({className:'mk'+(isHost?' host':''),html:isHost?'US':String(t.rank||''),iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:500}).bindTooltip(t.team,{direction:'top',className:'lm',offset:[0,-sz/2]}).bindPopup(()=>teamCard(t),popOpts);
- m.getElement&&0;m.on('add',()=>{const el=m.getElement();if(el)el.style.background=st.c;});
- m.addTo(isHost?hostG:teamG);teamMarkers[t.team]=m;t._m=m;
- if(t.airport&&t.airport.lat!=null&&!isHost){const gc=turf.greatCircle([t.airport.lng,t.airport.lat],[ONT.lng,ONT.lat],{npoints:80});L.geoJSON(gc,{style:{color:st.c,weight:1.5,opacity:.7,dashArray:'6 5'}}).addTo(pathG);}
+ COPIES.forEach(o=>{const m=L.marker([t.lat,t.lng+o],{icon:L.divIcon({className:'mk'+(isHost?' host':''),html:isHost?'US':String(t.rank||''),iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:500}).bindTooltip(t.team,{direction:'top',className:'lm',offset:[0,-sz/2]}).bindPopup(()=>teamCard(t),popOpts);
+  m.on('add',()=>{const el=m.getElement();if(el)el.style.background=st.c;});m.addTo(isHost?hostG:teamG);if(o===0){teamMarkers[t.team]=m;t._m=m;}});
+ if(t.airport&&t.airport.lat!=null&&!isHost){const pts=gcPoints(t.airport,ONT);COPIES.forEach(o=>L.polyline(pts.map(p=>[p[0],p[1]+o]),{color:st.c,weight:1.5,opacity:.7,dashArray:'6 5'}).addTo(pathG));}
 });
 /* qualifying events */
 const evG=L.layerGroup().addTo(map);
 (EVENTS||[]).forEach(e=>{if(e.lat==null)return;if(e.gender&&e.gender!=='both'&&e.gender!==G)return;
- L.marker([e.lat,e.lng],{icon:L.divIcon({className:'ev',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:300}).addTo(evG).bindTooltip(e.name,{direction:'top',className:'lm',offset:[0,-10]})
- .bindPopup(`<h2>${esc(e.name)}</h2><p class="addr">${esc([e.venue,e.city,e.country].filter(Boolean).join(', '))}${e.dates?`. ${esc(e.dates)}`:''}.</p>${e.note?`<p class="seas"><i>What it decides</i>${esc(e.note)}</p>`:''}${e.url?`<p class="seas"><i>Source</i>${link(e.url,e.source||'ICC')}</p>`:''}`,popOpts);});
+ COPIES.forEach(o=>L.marker([e.lat,e.lng+o],{icon:L.divIcon({className:'ev',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:300}).addTo(evG).bindTooltip(e.name,{direction:'top',className:'lm',offset:[0,-10]})
+ .bindPopup(`<h2>${esc(e.name)}</h2><p class="addr">${esc([e.venue,e.city,e.country].filter(Boolean).join(', '))}${e.dates?`. ${esc(e.dates)}`:''}.</p>${e.note?`<p class="seas"><i>What it decides</i>${esc(e.note)}</p>`:''}${e.url?`<p class="seas"><i>Source</i>${link(e.url,e.source||'ICC')}</p>`:''}`,popOpts));});
 /* US grounds */
 const grG=L.layerGroup().addTo(map);
 (GROUNDS||[]).forEach(g=>{if(g.lat==null)return;const cap=g.capacity||5000;const sz=Math.max(14,Math.min(30,Math.sqrt(cap/40)));const cls='gr'+(g.status==='LA28 venue'?' la28':'')+(g.status==='planned'?' plan':'')+(g.status==='dismantled'?' gone':'');
- L.marker([g.lat,g.lng],{icon:L.divIcon({className:cls,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:g.status==='LA28 venue'?800:200}).addTo(grG).bindTooltip(g.name,{direction:'top',className:'lm',offset:[0,-sz/2]})
- .bindPopup(`<h2>${link(g.web,g.name)}</h2><p class="addr">${esc(g.city)}, ${esc(g.state)}. ${esc(g.status)}${g.opened?`, opened ${esc(g.opened)}`:''}.</p><div class="kv">${g.capacity?`<div><b>${fmt(g.capacity)}</b><span>capacity</span></div>`:''}<div><b>${esc(g.region||'')}</b><span>region</span></div></div>${g.tenants?`<p class="seas"><i>Tenants</i>${esc(g.tenants)}</p>`:''}${g.notable?`<p class="seas"><i>Notable</i>${esc(g.notable)}</p>`:''}${g.owner_or_operator?`<p class="seas"><i>Owner or operator</i>${esc(g.owner_or_operator)}</p>`:''}${g.sources&&g.sources.length?`<p class="seas"><i>Sources</i>${g.sources.map(s=>link(s.url,s.label)).join(' &middot; ')}</p>`:''}`,popOpts);});
+ COPIES.forEach(o=>L.marker([g.lat,g.lng+o],{icon:L.divIcon({className:cls,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:g.status==='LA28 venue'?800:200}).addTo(grG).bindTooltip(g.name,{direction:'top',className:'lm',offset:[0,-sz/2]})
+ .bindPopup(`<h2>${link(g.web,g.name)}</h2><p class="addr">${esc(g.city)}, ${esc(g.state)}. ${esc(g.status)}${g.opened?`, opened ${esc(g.opened)}`:''}.</p><div class="kv">${g.capacity?`<div><b>${fmt(g.capacity)}</b><span>capacity</span></div>`:''}<div><b>${esc(g.region||'')}</b><span>region</span></div></div>${g.tenants?`<p class="seas"><i>Tenants</i>${esc(g.tenants)}</p>`:''}${g.notable?`<p class="seas"><i>Notable</i>${esc(g.notable)}</p>`:''}${g.owner_or_operator?`<p class="seas"><i>Owner or operator</i>${esc(g.owner_or_operator)}</p>`:''}${g.sources&&g.sources.length?`<p class="seas"><i>Sources</i>${g.sources.map(s=>link(s.url,s.label)).join(' &middot; ')}</p>`:''}`,popOpts));});
 
 /* layer toggles */
 const tog=(id,layer)=>{const cb=document.getElementById(id);cb.onchange=()=>cb.checked?layer.addTo(map):map.removeLayer(layer);};
@@ -201,7 +203,7 @@ const rp=document.getElementById('rpanel');let sortBy='rank';
 function renderRoster(){const rows=TEAMS.slice();const w={qualified:0,host:1,course:2,qualifier:3,blocked:4};
  rows.sort((a,b)=>sortBy==='rank'?((a.rank||99)-(b.rank||99)):sortBy==='dist'?(((a.airport&&km(a.airport,ONT))||1e9)-((b.airport&&km(b.airport,ONT))||1e9)):sortBy==='status'?((w[a.status]??9)-(w[b.status]??9))||((a.rank||99)-(b.rank||99)):a.team.localeCompare(b.team));
  document.getElementById('rpList').innerHTML=rows.map(t=>{const st=STATUS[t.status]||STATUS.course;const d=t.airport&&t.airport.lat!=null?`${fmt(mi(km(t.airport,ONT)))} mi to ONT`:'';return `<a data-t="${esc(t.team)}"><span class="nm">${t.rank!=null?'#'+t.rank+' ':''}${esc(t.team)}</span><span class="rt">${d}</span><span class="cu"><span style="color:${st.c}">&#9679;</span> ${esc(st.l)}${t.hq_city?` &middot; ${esc(t.hq_city)}`:''}</span></a>`;}).join('');
- document.querySelectorAll('#rpList a').forEach(a=>a.onclick=()=>{const t=TEAMS.find(x=>x.team===a.dataset.t);if(!t)return;if(!map.hasLayer(t.status==='host'?hostG:teamG)){document.getElementById(t.status==='host'?'tHost':'tTeams').click();}map.setView([t.lat,t.lng],4);t._m.openPopup();if(window.innerWidth<=700)rp.classList.remove('open');});
+ document.querySelectorAll('#rpList a').forEach(a=>a.onclick=()=>{const t=TEAMS.find(x=>x.team===a.dataset.t);if(!t)return;if(!map.hasLayer(t.status==='host'?hostG:teamG)){document.getElementById(t.status==='host'?'tHost':'tTeams').click();}const c=map.getCenter().lng;const k=Math.round((c-t.lng)/360)*360;map.setView([t.lat,t.lng+k],4);const mk=(t.status==='host'?hostG:teamG).getLayers().find(l=>Math.abs(l.getLatLng().lng-(t.lng+k))<1e-6&&Math.abs(l.getLatLng().lat-t.lat)<1e-6);(mk||t._m).openPopup();if(window.innerWidth<=700)rp.classList.remove('open');});
  document.querySelectorAll('[data-rs]').forEach(b=>b.classList.toggle('on',b.dataset.rs===sortBy));}
 document.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{sortBy=b.dataset.rs;renderRoster();});
 document.getElementById('teamList').onclick=()=>{document.getElementById('rpTitle').textContent=META.title;document.getElementById('rpSub').textContent=`${TEAMS.length} teams. Tap one for its card.`;renderRoster();rp.classList.add('open');document.getElementById('kpanel').classList.remove('open');map.closePopup();if(window.innerWidth<=700)panel.classList.remove('open');};
